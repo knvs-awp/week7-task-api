@@ -3,6 +3,10 @@ const Task = require('../models/Task');
 
 const router = express.Router();
 
+router.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'task-api' });
+});
+
 router.get('/', async (req, res, next) => {
   try {
     res.json(await Task.findAll({ order: [['createdAt', 'DESC']] }));
