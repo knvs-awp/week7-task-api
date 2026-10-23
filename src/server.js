@@ -5,9 +5,9 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const session = require('express-session');
-const passport = require('./config/passport');
 const { RedisStore } = require('connect-redis');
-const { createClient } = require('redis');
+const passport = require('./config/passport');
+const redis = require('./config/redis');
 const taskRoutes = require('./routes/tasks');
 const sequelize = require('./config/database');
 
@@ -28,6 +28,7 @@ app.use((req, res, next) => {
 });
 
 app.use(session({
+  store: new RedisStore({ client: redis }),
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
@@ -44,6 +45,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Unexpected server error' });
 });
 
-sequelize.sync({ alter: true }).then(() => {
-  app.listen(process.env.PORT || 3000, () => console.log('API running'));
-});
+let startupStep = 'database synchronization';
+
+(async () => {
+  try {
+    await sequelize.sync({ alter: true });
+    startupStep = 'Redis connection';
+    await redis.connect();
+    app.listen(process.env.PORT || 3000, () => console.log('API running'));
+  } catch (err) {
+    console.error(`Could not complete startup during ${startupStep}.`, err);
+    process.exitCode = 1;
+  }
+})();
