@@ -1,0 +1,230 @@
+{
+  "verifiedOn": "2026-10-23",
+  "testAccount": {
+    "label": "kostiaaccount",
+    "email": "knovosydliuk0342@conestogac.on.ca"
+  },
+  "redisConnection": "redis://localhost:6380",
+  "redisContainer": "week7-redis-lab6",
+  "allPassed": true,
+  "checks": [
+    {
+      "test": "Health route, request logging and Helmet header",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/tasks/health",
+          "expectedStatus": 200,
+          "actualStatus": 200,
+          "responseExcerpt": {
+            "status": "ok",
+            "service": "task-api"
+          },
+          "headers": {
+            "x-content-type-options": "nosniff"
+          },
+          "requestLog": "GET /api/tasks/health"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "test": "Invalid task returns validation errors",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/tasks",
+          "expectedStatus": 400,
+          "actualStatus": 400,
+          "responseExcerpt": {
+            "errors": [
+              {
+                "type": "field",
+                "value": "x",
+                "msg": "title must be 3-120 characters",
+                "path": "title",
+                "location": "body"
+              },
+              {
+                "type": "field",
+                "value": 99,
+                "msg": "Invalid value",
+                "path": "priority",
+                "location": "body"
+              }
+            ]
+          }
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "test": "Valid task is created with an ID",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/tasks",
+          "expectedStatus": 201,
+          "actualStatus": 201,
+          "responseExcerpt": {
+            "completed": false,
+            "id": 6,
+            "title": "Kostia cache test",
+            "priority": 1,
+            "updatedAt": "2026-10-23T04:04:41.805Z",
+            "createdAt": "2026-10-23T04:04:41.805Z"
+          }
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "test": "Missing task returns 404",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/tasks/6",
+          "expectedStatus": 404,
+          "actualStatus": 404,
+          "responseExcerpt": {
+            "error": "Task not found"
+          }
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "test": "Profile before login returns 401",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "expectedStatus": 401,
+          "actualStatus": 401,
+          "responseExcerpt": {
+            "error": "Sign in required"
+          }
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "test": "Register, log in and read the profile with the session cookie",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/auth/register",
+          "expectedStatus": 201,
+          "actualStatus": 201,
+          "responseExcerpt": {
+            "id": 1,
+            "email": "knovosydliuk0342@conestogac.on.ca"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/login",
+          "expectedStatus": 200,
+          "actualStatus": 200,
+          "responseExcerpt": {
+            "email": "knovosydliuk0342@conestogac.on.ca"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "expectedStatus": 200,
+          "actualStatus": 200,
+          "responseExcerpt": {
+            "id": 1,
+            "email": "knovosydliuk0342@conestogac.on.ca"
+          }
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "test": "Two task list requests return database then cache",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/tasks",
+          "expectedStatus": 200,
+          "actualStatus": 200,
+          "responseExcerpt": {
+            "source": "database",
+            "data": [
+              {
+                "id": 6,
+                "title": "Kostia cache test",
+                "completed": false,
+                "priority": 1
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/tasks",
+          "expectedStatus": 200,
+          "actualStatus": 200,
+          "responseExcerpt": {
+            "source": "cache",
+            "data": [
+              {
+                "id": 6,
+                "title": "Kostia cache test",
+                "completed": false,
+                "priority": 1
+              }
+            ]
+          }
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "test": "Create a task and read fresh data after cache invalidation",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/tasks",
+          "expectedStatus": 201,
+          "actualStatus": 201,
+          "responseExcerpt": {
+            "completed": false,
+            "id": 7,
+            "title": "Kostia fresh task",
+            "priority": 2,
+            "updatedAt": "2026-10-23T04:04:41.831Z",
+            "createdAt": "2026-10-23T04:04:41.831Z"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/tasks",
+          "expectedStatus": 200,
+          "actualStatus": 200,
+          "responseExcerpt": {
+            "source": "database",
+            "data": [
+              {
+                "id": 7,
+                "title": "Kostia fresh task",
+                "completed": false,
+                "priority": 2
+              },
+              {
+                "id": 6,
+                "title": "Kostia cache test",
+                "completed": false,
+                "priority": 1
+              }
+            ]
+          }
+        }
+      ],
+      "result": "PASS"
+    }
+  ]
+}
