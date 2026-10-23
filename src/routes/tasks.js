@@ -1,6 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const { validate } = require('../middleware/validate');
+const requireRole = require('../middleware/requireRole');
 const Task = require('../models/Task');
 
 const router = express.Router();
@@ -60,7 +61,7 @@ router.put('/:id', updateTaskRules, async (req, res, next) => {
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const deleted = await Task.destroy({ where: { id: req.params.id } });
     if (!deleted) return res.status(404).json({ error: 'Task not found' });

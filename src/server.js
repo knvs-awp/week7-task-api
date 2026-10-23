@@ -4,10 +4,15 @@ const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
+const session = require('express-session');
+const passport = require('./config/passport');
+const { RedisStore } = require('connect-redis');
+const { createClient } = require('redis');
 const taskRoutes = require('./routes/tasks');
 const sequelize = require('./config/database');
 
 require('./models/Task');
+require('./models/User');
 
 const app = express();
 
@@ -22,13 +27,23 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, sameSite: 'lax', secure: false }
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
 app.use('/api/tasks', taskRoutes);
+app.use('/api/auth', require('./routes/auth'));
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
 app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ error: 'Unexpected server error' });
 });
 
-sequelize.sync().then(() => {
+sequelize.sync({ alter: true }).then(() => {
   app.listen(process.env.PORT || 3000, () => console.log('API running'));
 });
